@@ -848,16 +848,14 @@ async function api(accion, datos={}) {
 }
 
 async function apiConRespuesta(accion, datos={}) {
-  // Para operaciones que necesitan respuesta usamos JSONP / proxy
-  // En producción: desplegar Apps Script con acceso "Cualquier persona"
-  // y usar fetch normal (no no-cors) desde el mismo dominio o configurando CORS en el script
+  // Apps Script no soporta CORS desde dominios externos.
+  // Usamos GET con parámetros para operaciones de lectura/login,
+  // y un formulario POST oculto con fetch para escritura.
   const payload = JSON.stringify({ accion, ...datos });
   try {
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: payload
-    });
+    // Enviamos como GET con el payload en query string (Apps Script lo recibe en doGet via parámetro)
+    const url = SCRIPT_URL + '?payload=' + encodeURIComponent(payload);
+    const res = await fetch(url, { method: 'GET' });
     return await res.json();
   } catch(e) {
     return { ok: false, error: e.toString() };
