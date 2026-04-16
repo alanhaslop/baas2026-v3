@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAAS 2026 — Gestor de vtas v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --azul:    #1B3A52;
+  --azul2:   #2a5278;
+  --verde:   #1D9E75;
+  --amber:   #e67e22;
+  --rojo:    #e74c3c;
+  --gris:    #f7f6f2;
+  --borde:   #e0ddd6;
+  --texto:   #1a1a1a;
+  --muted:   #888;
+  --blanco:  #ffffff;
+  --r:       8px;
+  --sombra:  0 2px 16px rgba(0,0,0,.08);
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'DM Sans',sans-serif; font-size:14px; color:var(--texto); background:var(--gris); min-height:100vh; }
+
+/* ── LAYOUT ─────────────────────────────── */
+.pantalla { display:none; min-height:100vh; }
+.pantalla.activa { display:flex; flex-direction:column; }
+
+/* ── HEADER ─────────────────────────────── */
+.header {
+  background:var(--azul);
+  color:#fff;
+  padding:14px 24px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  position:sticky; top:0; z-index:100;
+}
+.header-logo { font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:400; letter-spacing:.04em; }
+.header-sub { font-size:11px; opacity:.6; margin-top:1px; }
+.header-actions { display:flex; gap:8px; align-items:center; }
+.rol-badge {
+  font-size:11px; padding:3px 10px;
+  background:rgba(255,255,255,.12);
+  border-radius:20px; color:rgba(255,255,255,.85);
+}
+.btn-logout { background:none; border:1px solid rgba(255,255,255,.25); color:rgba(255,255,255,.7); padding:4px 12px; border-radius:var(--r); cursor:pointer; font-size:12px; }
+.btn-logout:hover { background:rgba(255,255,255,.1); }
+
+/* ── CONTENEDOR PRINCIPAL ─────────────────── */
+.main { flex:1; padding:24px; max-width:960px; margin:0 auto; width:100%; }
+
+/* ── CARDS ───────────────────────────────── */
+.card {
+  background:var(--blanco);
+  border:1px solid var(--borde);
+  border-radius:var(--r);
+  padding:20px 24px;
+  margin-bottom:16px;
+  box-shadow:var(--sombra);
+}
+.card-title {
+  font-size:12px; font-weight:500;
+  letter-spacing:.12em; text-transform:uppercase;
+  color:var(--muted); margin-bottom:14px;
+  padding-bottom:10px; border-bottom:1px solid var(--borde);
+}
+
+/* ── BOTONES ─────────────────────────────── */
+.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  padding:10px 20px; border-radius:var(--r); font-size:14px; font-family:inherit;
+  cursor:pointer; border:none; transition:all .15s; font-weight:500;
+}
+.btn:active { transform:scale(.98); }
+.btn-primary   { background:var(--azul);  color:#fff; }
+.btn-primary:hover { background:var(--azul2); }
+.btn-success   { background:var(--verde); color:#fff; }
+.btn-success:hover { background:#169060; }
+.btn-warning   { background:var(--amber); color:#fff; }
+.btn-warning:hover { background:#d35400; }
+.btn-danger    { background:var(--rojo);  color:#fff; }
+.btn-danger:hover { background:#c0392b; }
+.btn-outline   { background:transparent; border:1.5px solid var(--borde); color:var(--texto); }
+.btn-outline:hover { border-color:var(--azul); color:var(--azul); }
+.btn-ghost     { background:transparent; border:none; color:var(--muted); padding:8px 12px; }
+.btn-ghost:hover { color:var(--texto); }
+.btn-full      { width:100%; }
+.btn-lg        { padding:14px 24px; font-size:16px; }
+.btn-sm        { padding:6px 12px; font-size:12px; }
+
+/* ── MENÚ PRINCIPAL ──────────────────────── */
+.menu-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+  gap:12px;
+  margin-top:8px;
+}
+.menu-item {
+  background:var(--blanco);
+  border:1.5px solid var(--borde);
+  border-radius:var(--r);
+  padding:24px 20px;
+  cursor:pointer;
+  transition:all .15s;
+  text-align:center;
+}
+.menu-item:hover { border-color:var(--azul); transform:translateY(-2px); box-shadow:var(--sombra); }
+.menu-item-icon { font-size:28px; margin-bottom:10px; }
+.menu-item-label { font-size:14px; font-weight:500; color:var(--azul); }
+.menu-item-desc { font-size:12px; color:var(--muted); margin-top:4px; }
+
+/* ── FORMULARIO ─────────────────────────── */
+.form-group { margin-bottom:14px; }
+.form-label { font-size:12px; font-weight:500; color:var(--muted); margin-bottom:5px; display:block; }
+.form-control {
+  width:100%; padding:10px 12px;
+  border:1.5px solid var(--borde); border-radius:var(--r);
+  font-family:inherit; font-size:14px; color:var(--texto);
+  background:var(--blanco); transition:border .15s;
+}
+.form-control:focus { outline:none; border-color:var(--azul); }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+
+/* CUIT con máscara */
+.cuit-wrap { display:flex; gap:8px; align-items:flex-start; }
+.cuit-wrap .form-control { flex:1; }
+.btn-extranjero { white-space:nowrap; margin-top:0; }
+
+/* ── PRODUCTOS ───────────────────────────── */
+.productos-grid {
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:10px;
+  margin-bottom:16px;
+}
+.producto-card {
+  border:1.5px solid var(--borde);
+  border-radius:var(--r);
+  padding:12px;
+  text-align:center;
+}
+.producto-card.activo { border-color:var(--azul); background:#f0f5fa; }
+.producto-nombre { font-weight:500; font-size:13px; margin-bottom:4px; }
+.producto-stock  { font-size:11px; color:var(--muted); margin-bottom:8px; }
+.producto-stock.bajo { color:var(--amber); }
+.producto-stock.cero { color:var(--rojo); }
+.cant-ctrl { display:flex; align-items:center; justify-content:center; gap:8px; }
+.cant-btn { width:28px; height:28px; border-radius:50%; border:1.5px solid var(--borde); background:var(--blanco); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; transition:all .1s; }
+.cant-btn:hover { border-color:var(--azul); color:var(--azul); }
+.cant-num { font-size:18px; font-weight:500; min-width:24px; text-align:center; }
+
+/* ── CAJAS COMBINADAS ───────────────────── */
+.cajas-section { margin-top:16px; }
+.caja-item {
+  border:1px solid var(--borde);
+  border-radius:var(--r);
+  padding:12px 16px;
+  margin-bottom:8px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+}
+.caja-item .tipo-tag { font-size:11px; padding:2px 8px; border-radius:4px; }
+.tipo-cerrada  { background:#EEF4F8; color:var(--azul); }
+.tipo-combinada{ background:#FEF9EC; color:#92400e; }
+.caja-detalle  { flex:1; font-size:13px; }
+.caja-precio   { font-weight:500; color:var(--azul); white-space:nowrap; }
+
+/* ── TOTALES ─────────────────────────────── */
+.totales-bar {
+  background:var(--azul);
+  color:#fff;
+  border-radius:var(--r);
+  padding:16px 20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin:16px 0;
+}
+.totales-bar .label { font-size:11px; opacity:.6; margin-bottom:2px; }
+.totales-bar .valor { font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:600; }
+.totales-bar .valor-ars { font-size:13px; opacity:.7; margin-top:2px; }
+
+/* ── BOTONES DE ACCIÓN PRINCIPAL ─────────── */
+.acciones-venta {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:8px;
+}
+
+/* ── CONFIRMACIÓN ─────────────────────────── */
+.confirmacion-box {
+  text-align:center;
+  padding:32px 24px;
+}
+.confirmacion-num {
+  font-family:'Cormorant Garamond',serif;
+  font-size:56px; font-weight:300; color:var(--azul);
+  line-height:1;
+}
+.confirmacion-tipo {
+  font-size:13px; color:var(--muted); margin:4px 0 20px;
+  text-transform:uppercase; letter-spacing:.1em;
+}
+.confirmacion-estado {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 14px; border-radius:20px; font-size:13px;
+  margin:4px;
+}
+.estado-ok     { background:#d4edda; color:#155724; }
+.estado-error  { background:#f8d7da; color:#721c24; }
+.estado-pend   { background:#fff3cd; color:#856404; }
+
+.imp-status {
+  display:flex; align-items:center; gap:8px;
+  padding:10px 14px;
+  border-radius:var(--r);
+  border:1px solid var(--borde);
+  margin:8px 0;
+  font-size:13px;
+}
+.imp-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.imp-ok   .imp-dot { background:var(--verde); }
+.imp-pend .imp-dot { background:var(--amber); }
+.imp-err  .imp-dot { background:var(--rojo); }
+.imp-status .btn-sm { margin-left:auto; }
+
+/* ── LISTA DE RESERVAS ──────────────────── */
+.reserva-item {
+  border:1px solid var(--borde);
+  border-radius:var(--r);
+  padding:14px 16px;
+  margin-bottom:8px;
+  cursor:pointer;
+  transition:all .15s;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+}
+.reserva-item:hover { border-color:var(--azul); }
+.reserva-item.vencida { border-color:var(--rojo); background:#fff8f8; }
+.reserva-item.hoy     { border-color:var(--amber); background:#fffcf5; }
+.venc-badge {
+  font-size:11px; font-weight:500;
+  padding:3px 10px; border-radius:12px; white-space:nowrap;
+}
+.venc-vencida { background:#f8d7da; color:#721c24; }
+.venc-hoy     { background:#fff3cd; color:#856404; }
+.venc-manana  { background:#e2e3e5; color:#383d41; }
+.venc-futuro  { background:#cce5ff; color:#004085; }
+
+/* ── KANBAN / PANEL DESPACHO ─────────────── */
+.kanban-header {
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:8px;
+  margin-bottom:12px;
+}
+.kanban-col-title {
+  padding:8px 12px;
+  border-radius:var(--r);
+  font-size:12px; font-weight:500; text-align:center;
+}
+.col-pendiente    { background:#e9ecef; color:#495057; }
+.col-preparacion  { background:#cce5ff; color:#004085; }
+.col-listo        { background:#d4edda; color:#155724; }
+.col-entregado    { background:#E1F5EE; color:#0F6E56; }
+
+.kanban-grid {
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:8px;
+  align-items:start;
+}
+.kanban-col { display:flex; flex-direction:column; gap:8px; min-height:80px; }
+
+.pedido-card {
+  background:var(--blanco);
+  border:1.5px solid var(--borde);
+  border-radius:var(--r);
+  padding:12px 14px;
+  cursor:pointer;
+  transition:all .15s;
+  font-size:13px;
+}
+.pedido-card:hover { border-color:var(--azul); transform:translateY(-1px); box-shadow:var(--sombra); }
+.pedido-card.reserva-card { border-left:3px solid var(--amber); }
+.pedido-num  { font-weight:500; color:var(--azul); margin-bottom:2px; }
+.pedido-nom  { color:var(--muted); font-size:12px; margin-bottom:6px; }
+.pedido-prods{ font-size:11px; color:var(--texto); }
+.pedido-tipo-badge {
+  display:inline-block;
+  font-size:10px; padding:1px 7px; border-radius:3px; margin-top:4px;
+}
+.badge-venta    { background:#E1F5EE; color:#0F6E56; }
+.badge-reserva  { background:#FAEEDA; color:#854F0B; }
+.badge-cierre   { background:#EEEDFE; color:#534AB7; }
+
+/* ── MODAL ─────────────────────────────── */
+.modal-overlay {
+  display:none;
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.45);
+  z-index:200;
+  align-items:center; justify-content:center;
+}
+.modal-overlay.abierto { display:flex; }
+.modal {
+  background:var(--blanco);
+  border-radius:var(--r);
+  padding:24px;
+  width:90%; max-width:480px;
+  max-height:90vh;
+  overflow-y:auto;
+  box-shadow:0 16px 48px rgba(0,0,0,.18);
+}
+.modal-title { font-size:16px; font-weight:500; margin-bottom:16px; color:var(--azul); }
+.modal-acciones { display:flex; gap:8px; margin-top:16px; justify-content:flex-end; }
+
+/* ── CIERRE DE DÍA ──────────────────────── */
+.cierre-grid {
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:12px;
+  margin-bottom:16px;
+}
+.cierre-card {
+  background:var(--gris);
+  border-radius:var(--r);
+  padding:14px;
+  text-align:center;
+}
+.cierre-card .num  { font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:600; color:var(--azul); line-height:1; }
+.cierre-card .lbl  { font-size:11px; color:var(--muted); margin-top:4px; }
+.cierre-tabla { width:100%; border-collapse:collapse; font-size:13px; }
+.cierre-tabla th { text-align:left; padding:6px 8px; font-size:11px; font-weight:500; color:var(--muted); border-bottom:1px solid var(--borde); }
+.cierre-tabla td { padding:7px 8px; border-bottom:1px solid var(--borde); }
+.cierre-total { font-size:20px; font-weight:500; color:var(--azul); text-align:right; }
+
+/* ── LOGIN ──────────────────────────────── */
+.login-wrap {
+  min-height:100vh; display:flex;
+  align-items:center; justify-content:center;
+  background:var(--azul);
+}
+.login-box {
+  background:var(--blanco);
+  border-radius:12px;
+  padding:40px 36px;
+  width:100%; max-width:380px;
+  box-shadow:0 24px 64px rgba(0,0,0,.2);
+}
+.login-logo {
+  font-family:'Cormorant Garamond',serif;
+  font-size:28px; font-weight:400;
+  color:var(--azul); text-align:center;
+  margin-bottom:4px;
+}
+.login-sub { font-size:13px; color:var(--muted); text-align:center; margin-bottom:28px; }
+.login-error { background:#f8d7da; color:#721c24; padding:8px 12px; border-radius:var(--r); font-size:13px; margin-bottom:12px; display:none; }
+.btn-roles { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+
+/* ── UTILIDADES ─────────────────────────── */
+.sep { height:1px; background:var(--borde); margin:16px 0; }
+.text-muted { color:var(--muted); font-size:12px; }
+.text-center { text-align:center; }
+.mt8  { margin-top:8px; }
+.mt16 { margin-top:16px; }
+.mb8  { margin-bottom:8px; }
+.alerta-venc {
+  background:#fff3cd; border:1px solid #ffc107;
+  border-radius:var(--r); padding:10px 14px;
+  font-size:13px; color:#856404; margin-bottom:12px;
+}
+.empty-state { text-align:center; padding:40px 20px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════
+     P0 — LOGIN
+════════════════════════════════════════ -->
+<div id="p-login" class="pantalla activa">
+  <div class="login-wrap">
+    <div class="login-box">
+      <div class="login-logo">AGF Messenchymal</div>
+      <div class="login-sub">BAAS 2026 — Gestor de ventas v3</div>
+      <div id="login-error" class="login-error">Contraseña incorrecta</div>
+      <div class="form-group">
+        <label class="form-label">Contraseña</label>
+        <input type="password" id="inp-password" class="form-control" placeholder="••••••••" onkeydown="if(event.key==='Enter') document.getElementById('btn-op').click()">
+      </div>
+      <div class="btn-roles">
+        <button id="btn-op"  class="btn btn-primary btn-lg btn-full" onclick="hacerLogin('operador')">Operador de ventas</button>
+        <button id="btn-adm" class="btn btn-outline btn-lg btn-full" onclick="hacerLogin('administrativa')">Administrativa</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     P1 — MENÚ OPERADOR
+════════════════════════════════════════ -->
+<div id="p-menu-op" class="pantalla">
+  <div class="header">
+    <div><div class="header-logo">BAAS 2026</div><div class="header-sub">Gestor de ventas v3</div></div>
+    <div class="header-actions">
+      <span class="rol-badge">Operador</span>
+      <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="menu-grid">
+      <div class="menu-item" onclick="irA('p-formulario')">
+        <div class="menu-item-icon">🛒</div>
+        <div class="menu-item-label">Nueva venta / reserva</div>
+        <div class="menu-item-desc">Registrar compra o reserva</div>
+      </div>
+      <div class="menu-item" onclick="cargarReservas()">
+        <div class="menu-item-icon">📋</div>
+        <div class="menu-item-label">Reservas pendientes</div>
+        <div class="menu-item-desc" id="badge-reservas">Ver y gestionar</div>
+      </div>
+      <div class="menu-item" onclick="irA('p-modificar')">
+        <div class="menu-item-icon">✏️</div>
+        <div class="menu-item-label">Modificar / cancelar</div>
+        <div class="menu-item-desc">Requiere código supervisor</div>
+      </div>
+      <div class="menu-item" onclick="cargarCierreDia()">
+        <div class="menu-item-icon">📊</div>
+        <div class="menu-item-label">Cierre del día</div>
+        <div class="menu-item-desc">Arqueo y resumen</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     P2 — FORMULARIO DE VENTA / RESERVA
+════════════════════════════════════════ -->
+<div id="p-formulario" class="pantalla">
+  <div class="header">
+    <div><div class="header-logo">Nueva operación</div><div class="header-sub">BAAS 2026 v3</div></div>
+    <div class="header-actions">
+      <button class="btn-logout" onclick="irA('p-menu-op')">← Volver</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="card">
+      <div class="card-title">Datos del cliente</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nombre / razón social *</label>
+          <input type="text" id="f-nombre" class="form-control" placeholder="Ej: María López">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email *</label>
+          <input type="email" id="f-email" class="form-control" placeholder="cliente@email.com">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">CUIT</label>
+          <div class="cuit-wrap">
+            <input type="text" id="f-cuit" class="form-control" placeholder="XX-XXXXXXXX-X" maxlength="13" oninput="formatearCUIT(this)">
+            <button class="btn btn-outline btn-sm btn-extranjero" onclick="toggleExtranjero()" id="btn-extr">Extranjero</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Teléfono / WhatsApp</label>
+          <input type="tel" id="f-telefono" class="form-control" placeholder="+54 9 351...">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Productos</div>
+      <div class="productos-grid" id="productos-grid">
+        <!-- Se genera por JS -->
+      </div>
+      <div class="cajas-section" id="cajas-section">
+        <div class="card-title" style="margin-bottom:10px">Detalle de cajas</div>
+        <div id="lista-cajas">
+          <!-- Se genera por JS -->
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Condiciones de pago</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Método de pago *</label>
+          <select id="f-metodo" class="form-control" onchange="actualizarMoneda()">
+            <option value="">Seleccionar...</option>
+            <option value="Efectivo">Efectivo</option>
+            <option value="Transferencia">Transferencia</option>
+            <option value="Tarjeta">Tarjeta</option>
+            <option value="QR">QR</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Moneda</label>
+          <select id="f-moneda" class="form-control" onchange="calcularTotales()">
+            <option value="USD">Dólares (USD)</option>
+            <option value="ARS">Pesos (ARS)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row" id="row-tipo-cambio" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Tipo de cambio (ARS / USD)</label>
+          <input type="number" id="f-tipo-cambio" class="form-control" placeholder="1300" oninput="calcularTotales()">
+        </div>
+        <div></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Descuento general (%)</label>
+          <input type="number" id="f-descuento" class="form-control" min="0" max="100" placeholder="0" oninput="calcularTotales()">
+        </div>
+        <div></div>
+      </div>
+    </div>
+
+    <!-- Fecha vencimiento (solo reserva) -->
+    <div class="card" id="card-vencimiento" style="display:none">
+      <div class="card-title">Fecha de retiro y pago</div>
+      <div class="form-group">
+        <label class="form-label">Fecha acordada de pago *</label>
+        <input type="date" id="f-vencimiento" class="form-control">
+      </div>
+    </div>
+
+    <div class="totales-bar">
+      <div>
+        <div class="label">TOTAL A COBRAR</div>
+        <div class="valor" id="total-usd">u$0</div>
+        <div class="valor-ars" id="total-ars" style="display:none"></div>
+      </div>
+      <div style="text-align:right">
+        <div class="label">CAJAS</div>
+        <div class="valor" id="total-cajas">0</div>
+      </div>
+    </div>
+
+    <div class="acciones-venta">
+      <button class="btn btn-success btn-lg btn-full" onclick="confirmarVenta()">Confirmar venta</button>
+      <button class="btn btn-warning btn-lg btn-full" onclick="mostrarCampoVencimiento()">Generar reserva</button>
+    </div>
+    <div id="form-error" class="login-error mt8" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     P3 — CONFIRMACIÓN
+════════════════════════════════════════ -->
+<div id="p-confirmacion" class="pantalla">
+  <div class="header">
+    <div><div class="header-logo">BAAS 2026</div><div class="header-sub">Gestor de ventas v3</div></div>
+    <div class="header-actions"><span class="rol-badge" id="conf-rol-badge">Operador</span></div>
+  </div>
+  <div class="main">
+    <div class="card">
+      <div class="confirmacion-box">
+        <div class="confirmacion-num" id="conf-numero">#001</div>
+        <div class="confirmacion-tipo" id="conf-tipo">Venta confirmada</div>
+        <div>
+          <span class="confirmacion-estado estado-ok" id="conf-stock">Stock actualizado</span>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div id="imp-status-box" class="imp-status imp-pend">
+        <div class="imp-dot"></div>
+        <span id="imp-texto">Generando comprobante...</span>
+        <button class="btn btn-outline btn-sm" onclick="reimprimir()" id="btn-reimp" style="display:none">Reimprimir</button>
+      </div>
+      <div id="email-status-box" class="imp-status" style="margin-top:6px">
+        <div class="imp-dot" style="background:var(--muted)"></div>
+        <span id="email-texto">Enviando email...</span>
+      </div>
+      <div class="sep"></div>
+      <div id="conf-wa-section" style="margin-bottom:12px">
+        <button class="btn btn-outline btn-full" onclick="enviarWA('confirmacion')" id="btn-wa-conf">
+          Enviar por WhatsApp
+        </button>
+      </div>
+      <div class="acciones-venta">
+        <button class="btn btn-primary btn-full" onclick="nuevaVenta()">Nueva venta / reserva</button>
+        <button class="btn btn-outline btn-full" onclick="volverMenu()">Volver al menú</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     P4 — RESERVAS PENDIENTES
+════════════════════════════════════════ -->
+<div id="p-reservas" class="pantalla">
+  <div class="header">
+    <div><div class="header-logo">Reservas pendientes</div><div class="header-sub">BAAS 2026 v3</div></div>
+    <div class="header-actions"><button class="btn-logout" onclick="volverMenu()">← Volver</button></div>
+  </div>
+  <div class="main">
+    <div id="alerta-vencidas" class="alerta-venc" style="display:none"></div>
+    <div id="lista-reservas">
+      <div class="empty-state">Cargando reservas...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     P5 — DETALLE DE RESERVA
+════════════════════════════════════════ -->
+<div id="p-detalle-reserva" class="pantalla">
+  <div class="header">
+    <div><div class="header-logo" id="dr-titulo">Reserva #000</div><div class="header-sub">BAAS 2026 v3</div></div>
+    <div class="header-actions"><button class="btn-logout" onclick="irA('p-reservas')">← Reservas</button></div>
+  </div>
+  <div class="main">
+    <div class="card">
+      <div class="card-title">Cliente</div>
+      <div id="dr-datos-cliente"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Pedido</div>
+      <div id="dr-productos"></div>
+      <div class="sep"></div>
+      <div class="form-group">
+        <label class="form-label">Monto final (puede diferir del original)</label>
+        <input type="number" id="dr-monto-final" class="form-control" placeholder="USD">
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
+      <button class="btn btn-success btn-full btn-lg" onclick="cerrarReserva()">Cobrar y cerrar reserva</button>
+      <button class="btn btn-warning btn-full" onclick="irAModificarReserva()">Modificar pedido antes de cobrar</button>
+      <button class="btn btn-outline btn-full" onclick="enviarWA('reserva')">Enviar recordatorio por WhatsApp</button>
+      <button class="btn btn-danger btn-full btn-sm" onclick="pedirCodigoYCancelar('reserva')">Cancelar reserva</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     P6 — MODIFICAR / CANCELAR VENTA
+════════════════════════════════════════ -->
+<div id="p-modificar" class="pantalla">
+  <div class="header">
+    <div><div class="header-logo">Modificar / cancelar</div><div class="header-sub">BAAS 2026 v3</div></div>
+    <div class="header-actions"><button class="btn-logout" onclick="volverMenu()">← Volver</button></div>
+  </div>
+  <div class="main">
+    <div class="card">
+      <div class="card-title">Buscar venta o reserva</div>
+      <div class="form-row">
+        <input type="text" id="mod-buscar" class="form-control" placeholder="Número, CUIT o nombre">
+        <button class="btn btn-primary" onclick="buscarParaModificar()">Buscar</button>
+      </div>
+      <div class="text-muted mt8">Requiere código de supervisor para operar</div>
+    </div>
+    <div id="mod-resultado" style="display:none">
+      <div class="card">
+        <div class="card-title">Transacción encontrada</div>
+        <div id="mod-datos"></div>
+        <div class="sep"></div>
+        <div class="form-group">
+          <label class="form-label">Código de supervisor *</label>
+          <input type="password" id="mod-codigo" class="form-control" placeholder="••••••••">
+        </div>
+        <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
+          <button class="btn btn-danger btn-sm" onclick="ejecutarCancelacion()">Anular</button>
+        </div>
+        <div id="mod-error" class="login-error mt8" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     P7 — PANEL DESPACHO (ADMINISTRATIVA)
+════════════════════════════════════════ -->
+<div id="p-despacho" class="pantalla">
+  <div class="header">
+    <div><div class="header-logo">Panel de despacho</div><div class="header-sub">BAAS 2026 v3</div></div>
+    <div class="header-actions">
+      <span class="rol-badge">Administrativa</span>
+      <button class="btn btn-outline btn-sm" onclick="cargarCierreDia()" style="border-color:rgba(255,255,255,.3);color:#fff">Cierre del día</button>
+      <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </div>
+  <div class="main" style="max-width:100%">
+    <div style="display:flex; justify-content:flex-end; margin-bottom:12px">
+      <button class="btn btn-outline btn-sm" onclick="cargarDespacho()">Actualizar</button>
+    </div>
+    <div class="kanban-header">
+      <div class="kanban-col-title col-pendiente">Pendiente</div>
+      <div class="kanban-col-title col-preparacion">En preparación</div>
+      <div class="kanban-col-title col-listo">Listo</div>
+      <div class="kanban-col-title col-entregado">Entregado</div>
+    </div>
+    <div class="kanban-grid" id="kanban-grid">
+      <div class="kanban-col" id="col-Pendiente"></div>
+      <div class="kanban-col" id="col-En preparación"></div>
+      <div class="kanban-col" id="col-Listo"></div>
+      <div class="kanban-col" id="col-Entregado"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     P8 — DETALLE DE PEDIDO (DESPACHO)
+════════════════════════════════════════ -->
+<div id="p-detalle-pedido" class="pantalla">
+  <div class="header">
+    <div><div class="header-logo" id="dp-titulo">Pedido #000</div><div class="header-sub">BAAS 2026 v3</div></div>
+    <div class="header-actions"><button class="btn-logout" onclick="irA('p-despacho')">← Panel</button></div>
+  </div>
+  <div class="main">
+    <div class="card">
+      <div class="card-title">Cliente y pedido</div>
+      <div id="dp-datos"></div>
+    </div>
+    <div class="imp-status" id="dp-imp-status">
+      <div class="imp-dot"></div>
+      <span id="dp-imp-texto">—</span>
+      <button class="btn btn-outline btn-sm" onclick="reimprimirDesdePedido()" style="margin-left:auto">Reimprimir</button>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin-top:16px" id="dp-acciones">
+      <!-- Generado por JS según estado -->
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     P9 — MODIFICACIÓN AL RETIRAR
+════════════════════════════════════════ -->
+<div id="p-mod-retirar" class="pantalla">
+  <div class="header">
+    <div><div class="header-logo">Modificar al retirar</div><div class="header-sub">BAAS 2026 v3</div></div>
+    <div class="header-actions"><button class="btn-logout" onclick="irA('p-detalle-pedido')">← Volver</button></div>
+  </div>
+  <div class="main">
+    <div class="card">
+      <div class="card-title">Modificando pedido <span id="mr-num"></span></div>
+      <div class="productos-grid" id="mr-productos-grid"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Pago adicional</div>
+      <div class="form-group">
+        <label class="form-label">Monto final USD</label>
+        <input type="number" id="mr-monto" class="form-control">
+      </div>
+    </div>
+    <div class="totales-bar">
+      <div><div class="label">NUEVO TOTAL</div><div class="valor" id="mr-total">u$0</div></div>
+    </div>
+    <button class="btn btn-success btn-full btn-lg" onclick="confirmarModifRetirar()">Confirmar y reimprimir recibo</button>
+    <div id="mr-error" class="login-error mt8" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     P11 — CIERRE DEL DÍA
+════════════════════════════════════════ -->
+<div id="p-cierre" class="pantalla">
+  <div class="header">
+    <div><div class="header-logo">Cierre del día</div><div class="header-sub">BAAS 2026 v3</div></div>
+    <div class="header-actions"><button class="btn-logout" onclick="volverMenu()">← Volver</button></div>
+  </div>
+  <div class="main">
+    <div id="cierre-contenido">
+      <div class="empty-state">Generando resumen...</div>
+    </div>
+    <div class="mt16" style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="window.print()">Imprimir resumen</button>
+      <button class="btn btn-outline" onclick="volverMenu()">Volver al menú</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GENÉRICO -->
+<div id="modal-overlay" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-titulo">Confirmar acción</div>
+    <div id="modal-cuerpo"></div>
+    <div class="modal-acciones" id="modal-acciones"></div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════
+// CONFIGURACIÓN
+// ════════════════════════════════════════
+const SCRIPT_URL = 'TU_URL_DEL_APPS_SCRIPT_AQUI'; // ← reemplazar al desplegar
+const PRECIO_CERRADA   = 750;
+const PRECIO_COMBINADA = 900;
+const PRODUCTOS = ['Dermal','Capillary','Pink','Biomask'];
+
+// ════════════════════════════════════════
+// ESTADO GLOBAL
+// ════════════════════════════════════════
+let estado = {
+  rol:           null,
+  stock:         {},
+  unidades:      { Dermal:0, Capillary:0, Pink:0, Biomask:0 },
+  cajas:         [],
+  esExtranjero:  false,
+  ultimoId:      null,
+  ultimoTipo:    null,
+  ultimaData:    null,
+  reservaActual: null,
+  pedidoActual:  null,
+  pedidoEncontrado: null
+};
+
+// ════════════════════════════════════════
+// NAVEGACIÓN
+// ════════════════════════════════════════
+function irA(id) {
+  document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
+  const pant = document.getElementById(id);
+  if (pant) { pant.classList.add('activa'); window.scrollTo(0,0); }
+}
+
+// ════════════════════════════════════════
+// API
+// ════════════════════════════════════════
+async function api(accion, datos={}) {
+  const payload = JSON.stringify({ accion, ...datos });
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload
+    });
+    // no-cors retorna opaque — guardamos en Sheets via script
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, error: e.toString() };
+  }
+}
+
+async function apiConRespuesta(accion, datos={}) {
+  // Para operaciones que necesitan respuesta usamos JSONP / proxy
+  // En producción: desplegar Apps Script con acceso "Cualquier persona"
+  // y usar fetch normal (no no-cors) desde el mismo dominio o configurando CORS en el script
+  const payload = JSON.stringify({ accion, ...datos });
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload
+    });
+    return await res.json();
+  } catch(e) {
+    return { ok: false, error: e.toString() };
+  }
+}
+
+// ════════════════════════════════════════
+// LOGIN
+// ════════════════════════════════════════
+async function hacerLogin(rol) {
+  const pass = document.getElementById('inp-password').value;
+  const err  = document.getElementById('login-error');
+  err.style.display = 'none';
+
+  if (!pass) { err.textContent = 'Ingresá la contraseña'; err.style.display = 'block'; return; }
+
+  const res = await apiConRespuesta('login', { password: pass, rol });
+  if (res.ok) {
+    estado.rol = rol;
+    if (rol === 'operador') {
+      await cargarStockInicial();
+      cargarBadgeReservas();
+      irA('p-menu-op');
+    } else {
+      await cargarDespacho();
+      irA('p-despacho');
+    }
+    document.getElementById('inp-password').value = '';
+  } else {
+    err.textContent = 'Contraseña incorrecta';
+    err.style.display = 'block';
+  }
+}
+
+function cerrarSesion() {
+  estado.rol = null;
+  irA('p-login');
+}
+
+function volverMenu() {
+  if (estado.rol === 'administrativa') irA('p-despacho');
+  else irA('p-menu-op');
+}
+
+// ════════════════════════════════════════
+// STOCK
+// ════════════════════════════════════════
+async function cargarStockInicial() {
+  const res = await apiConRespuesta('obtenerStock');
+  if (res.ok) estado.stock = res.stock;
+  renderizarProductos();
+}
+
+function cargarBadgeReservas() {
+  apiConRespuesta('obtenerReservas').then(res => {
+    if (!res.ok) return;
+    const alertas = res.reservas.filter(r => r.estadoVenc === 'vencida' || r.estadoVenc === 'hoy');
+    const badge = document.getElementById('badge-reservas');
+    if (alertas.length > 0) {
+      badge.textContent = `⚠ ${alertas.length} requieren atención`;
+      badge.style.color = '#e74c3c';
+    }
+  });
+}
+
+// ════════════════════════════════════════
+// FORMULARIO — PRODUCTOS
+// ════════════════════════════════════════
+function renderizarProductos(gridId='productos-grid', unidadesActuales=null) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  grid.innerHTML = '';
+  const unids = unidadesActuales || estado.unidades;
+
+  PRODUCTOS.forEach(prod => {
+    const s = estado.stock[prod];
+    const disp = s ? s.disponible : '?';
+    const esBajo = typeof disp === 'number' && disp > 0 && disp <= 10;
+    const esCero = typeof disp === 'number' && disp <= 0;
+    const cant = unids[prod] || 0;
+
+    const div = document.createElement('div');
+    div.className = 'producto-card' + (cant > 0 ? ' activo' : '');
+    div.id = `prod-card-${prod}-${gridId}`;
+    div.innerHTML = `
+      <div class="producto-nombre">${prod}</div>
+      <div class="producto-stock ${esBajo?'bajo':''} ${esCero?'cero':''}">${esCero ? 'Sin stock' : `${disp} disp.`}</div>
+      <div class="cant-ctrl">
+        <button class="cant-btn" onclick="cambiarCantidad('${prod}','${gridId}',-1)" ${esCero && cant===0?'disabled':''}>−</button>
+        <span class="cant-num" id="cant-${prod}-${gridId}">${cant}</span>
+        <button class="cant-btn" onclick="cambiarCantidad('${prod}','${gridId}',1)" ${esCero?'disabled':''}>+</button>
+      </div>`;
+    grid.appendChild(div);
+  });
+}
+
+function cambiarCantidad(prod, gridId, delta) {
+  const obj = gridId === 'productos-grid' ? estado.unidades : estado.unidadesMR;
+  if (!obj) return;
+  const nuevo = Math.max(0, (obj[prod] || 0) + delta);
+  const disp  = estado.stock[prod] ? estado.stock[prod].disponible : 0;
+  if (delta > 0 && nuevo > disp) return;
+  obj[prod] = nuevo;
+
+  const span = document.getElementById(`cant-${prod}-${gridId}`);
+  if (span) span.textContent = nuevo;
+
+  const card = document.getElementById(`prod-card-${prod}-${gridId}`);
+  if (card) card.className = 'producto-card' + (nuevo > 0 ? ' activo' : '');
+
+  if (gridId === 'productos-grid') {
+    recalcularCajas();
+    calcularTotales();
+  } else {
+    calcularTotalMR();
+  }
+}
+
+function recalcularCajas() {
+  const u = estado.unidades;
+  const total = Object.values(u).reduce((a,b)=>a+b, 0);
+  estado.cajas = [];
+
+  // Por simplicidad: si un producto tiene múltiplos de 5 → cajas cerradas
+  // el resto → se agrupan en cajas combinadas
+  PRODUCTOS.forEach(prod => {
+    const cant = u[prod] || 0;
+    const cajasCerradas = Math.floor(cant / 5);
+    for (let i=0; i<cajasCerradas; i++) {
+      estado.cajas.push({ tipo:'Cerrada', productos:[prod,prod,prod,prod,prod], precio:PRECIO_CERRADA });
+    }
+  });
+
+  // Resto de unidades → cajas combinadas de a 5
+  const resto = {};
+  PRODUCTOS.forEach(prod => { const c = (u[prod]||0)%5; if(c>0) resto[prod]=c; });
+  let pool = [];
+  Object.entries(resto).forEach(([p,c]) => { for(let i=0;i<c;i++) pool.push(p); });
+  while (pool.length >= 5) {
+    estado.cajas.push({ tipo:'Combinada', productos:pool.splice(0,5), precio:PRECIO_COMBINADA });
+  }
+  // Unidades sueltas (menos de 5 en total del resto) → una caja combinada incompleta
+  if (pool.length > 0) {
+    estado.cajas.push({ tipo:'Combinada', productos:pool, precio:PRECIO_COMBINADA });
+  }
+
+  renderizarCajas();
+}
+
+function renderizarCajas() {
+  const cont = document.getElementById('lista-cajas');
+  if (!cont) return;
+  if (estado.cajas.length === 0) { cont.innerHTML = '<div class="text-muted">Sin productos seleccionados</div>'; return; }
+  cont.innerHTML = estado.cajas.map((c,i) => `
+    <div class="caja-item">
+      <span class="tipo-tag ${c.tipo==='Cerrada'?'tipo-cerrada':'tipo-combinada'}">${c.tipo}</span>
+      <span class="caja-detalle">${c.productos.join(', ')}</span>
+      <span class="caja-precio">u$${c.precio}</span>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════
+// FORMULARIO — CUIT Y MONEDA
+// ════════════════════════════════════════
+function formatearCUIT(input) {
+  if (estado.esExtranjero) return;
+  let v = input.value.replace(/\D/g,'').slice(0,11);
+  if (v.length > 2)  v = v.slice(0,2)  + '-' + v.slice(2);
+  if (v.length > 11) v = v.slice(0,11) + '-' + v.slice(11);
+  input.value = v;
+}
+
+function toggleExtranjero() {
+  estado.esExtranjero = !estado.esExtranjero;
+  const inp = document.getElementById('f-cuit');
+  const btn = document.getElementById('btn-extr');
+  if (estado.esExtranjero) {
+    inp.value = 'Extranjero'; inp.disabled = true;
+    btn.classList.add('btn-primary'); btn.classList.remove('btn-outline');
+  } else {
+    inp.value = ''; inp.disabled = false;
+    btn.classList.remove('btn-primary'); btn.classList.add('btn-outline');
+  }
+}
+
+function actualizarMoneda() {
+  const metodo = document.getElementById('f-metodo').value;
+  const monedaSel = document.getElementById('f-moneda');
+  const rowTC = document.getElementById('row-tipo-cambio');
+  if (metodo === 'Efectivo') {
+    monedaSel.value = 'USD';
+    rowTC.style.display = 'none';
+  } else {
+    monedaSel.value = 'ARS';
+    rowTC.style.display = '';
+  }
+  calcularTotales();
+}
+
+function calcularTotales() {
+  const subtotal = estado.cajas.reduce((a,c)=>a+c.precio, 0);
+  const desc = parseFloat(document.getElementById('f-descuento').value)||0;
+  const total = subtotal * (1 - desc/100);
+  const moneda = document.getElementById('f-moneda').value;
+  const tc = parseFloat(document.getElementById('f-tipo-cambio').value)||0;
+
+  document.getElementById('total-usd').textContent = `u$${Math.round(total).toLocaleString('es-AR')}`;
+  document.getElementById('total-cajas').textContent = estado.cajas.length;
+
+  const totalARS = document.getElementById('total-ars');
+  if (moneda === 'ARS' && tc > 0) {
+    totalARS.textContent = `AR$ ${Math.round(total*tc).toLocaleString('es-AR')}`;
+    totalARS.style.display = 'block';
+  } else {
+    totalARS.style.display = 'none';
+  }
+}
+
+function mostrarCampoVencimiento() {
+  document.getElementById('card-vencimiento').style.display = 'block';
+  // Scroll al final
+  document.getElementById('card-vencimiento').scrollIntoView({ behavior:'smooth' });
+  // Confirmación
+  setTimeout(() => enviarFormulario('Reserva'), 100);
+}
+
+// ════════════════════════════════════════
+// ENVIAR VENTA O RESERVA
+// ════════════════════════════════════════
+async function confirmarVenta() {
+  await enviarFormulario('Venta');
+}
+
+async function enviarFormulario(tipo) {
+  const nombre = document.getElementById('f-nombre').value.trim();
+  const email  = document.getElementById('f-email').value.trim();
+  const cuit   = estado.esExtranjero ? 'Extranjero' : document.getElementById('f-cuit').value.trim();
+
+  const errBox = document.getElementById('form-error');
+  errBox.style.display = 'none';
+
+  if (!nombre) { errBox.textContent='Nombre requerido'; errBox.style.display='block'; return; }
+  if (!email)  { errBox.textContent='Email requerido';  errBox.style.display='block'; return; }
+  if (estado.cajas.length === 0) { errBox.textContent='Agregá al menos un producto'; errBox.style.display='block'; return; }
+  if (!document.getElementById('f-metodo').value) { errBox.textContent='Seleccioná método de pago'; errBox.style.display='block'; return; }
+  if (tipo === 'Reserva') {
+    const fv = document.getElementById('f-vencimiento').value;
+    if (!fv) { errBox.textContent='Ingresá la fecha acordada de pago'; errBox.style.display='block'; return; }
+  }
+
+  const subtotal  = estado.cajas.reduce((a,c)=>a+c.precio, 0);
+  const desc      = parseFloat(document.getElementById('f-descuento').value)||0;
+  const montoUSD  = Math.round(subtotal * (1 - desc/100));
+  const tc        = parseFloat(document.getElementById('f-tipo-cambio').value)||0;
+  const moneda    = document.getElementById('f-moneda').value;
+
+  const payload = {
+    nombre, email, cuit,
+    telefono:      document.getElementById('f-telefono').value.trim(),
+    metodoPago:    document.getElementById('f-metodo').value,
+    moneda,
+    tipoCambio:    tc || null,
+    unidades:      { ...estado.unidades },
+    detalleCajas:  estado.cajas,
+    descuentoPct:  desc,
+    montoUSD,
+    montoARS:      tc ? Math.round(montoUSD * tc) : 0,
+    fechaVencimiento: tipo === 'Reserva' ? document.getElementById('f-vencimiento').value : null,
+    operador:      'operador'
+  };
+
+  estado.ultimaData = payload;
+
+  const accion = tipo === 'Venta' ? 'confirmarVenta' : 'generarReserva';
+  irA('p-confirmacion');
+  document.getElementById('conf-numero').textContent = '...';
+  document.getElementById('conf-tipo').textContent = tipo === 'Venta' ? 'Venta' : 'Reserva pendiente de pago';
+
+  const res = await apiConRespuesta(accion, payload);
+
+  if (res.ok) {
+    estado.ultimoId   = res.id;
+    estado.ultimoTipo = tipo;
+    document.getElementById('conf-numero').textContent = '#' + String(res.id).padStart(3,'0');
+    actualizarEstadoImpresion(res.estadoImpresion, res.urlPDF);
+    actualizarEstadoEmail(res.emailOk);
+    document.getElementById('btn-wa-conf').setAttribute('data-tel', payload.telefono);
+  } else {
+    document.getElementById('conf-numero').textContent = 'Error';
+    document.getElementById('conf-tipo').textContent = res.error || 'Error al procesar';
+  }
+}
+
+function actualizarEstadoImpresion(estado_, urlPDF) {
+  const box   = document.getElementById('imp-status-box');
+  const texto = document.getElementById('imp-texto');
+  const btn   = document.getElementById('btn-reimp');
+  box.className = 'imp-status ' + (estado_==='OK' ? 'imp-ok' : 'imp-err');
+  texto.textContent = estado_==='OK' ? 'Comprobante generado' : 'Error al generar comprobante';
+  btn.style.display = 'inline-flex';
+  if (urlPDF) { btn.onclick = () => window.open(urlPDF, '_blank'); }
+}
+
+function actualizarEstadoEmail(ok) {
+  const box   = document.getElementById('email-status-box');
+  const texto = document.getElementById('email-texto');
+  box.querySelector('.imp-dot').style.background = ok ? 'var(--verde)' : 'var(--rojo)';
+  texto.textContent = ok ? 'Email enviado al cliente' : 'Email no enviado — revisar manualmente';
+}
+
+// ════════════════════════════════════════
+// WHATSAPP
+// ════════════════════════════════════════
+function enviarWA(contexto) {
+  let tel = '';
+  let msg = '';
+  const id = estado.ultimoId;
+
+  if (contexto === 'confirmacion') {
+    const d = estado.ultimaData;
+    tel = d ? d.telefono : '';
+    if (estado.ultimoTipo === 'Reserva') {
+      msg = `Hola ${d.nombre}, confirmamos tu reserva #${String(id).padStart(3,'0')} en BAAS 2026. Te esperamos para completar el pago y retirar tu pedido. Cualquier consulta, ¡escribinos!`;
+    } else {
+      msg = `Hola ${d.nombre}, gracias por tu compra en BAAS 2026. Tu pedido #${String(id).padStart(3,'0')} está en preparación. Cualquier consulta, ¡escribinos!`;
+    }
+  } else if (contexto === 'reserva') {
+    const r = estado.reservaActual;
+    if (!r) return;
+    tel = r.telefono;
+    msg = `Hola ${r.nombre}, recordá que tenemos reservado tu pedido #${String(r.id).padStart(3,'0')} — ${resumenProductos(r)} — Monto acordado: u$${r.montoUSD}. Acercate por nuestro stand principal para poder retirarlo.`;
+  } else if (contexto === 'entrega') {
+    const p = estado.pedidoActual;
+    if (!p) return;
+    tel = p.telefono;
+    msg = `Hola ${p.nombre}, retiraste el pedido. Gracias por confiar en nosotros. Sabemos que el producto te va a dar resultados y quedamos atentos a cualquier inquietud. — AGF Messenchymal`;
+  }
+
+  if (!tel) { alert('No hay número de WhatsApp registrado para este cliente'); return; }
+  const num = tel.replace(/\D/g,'');
+  const url = `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
+function resumenProductos(r) {
+  const parts = [];
+  if (r.dermal    > 0) parts.push(`Dermal ×${r.dermal}`);
+  if (r.capillary > 0) parts.push(`Capillary ×${r.capillary}`);
+  if (r.pink      > 0) parts.push(`Pink ×${r.pink}`);
+  if (r.biomask   > 0) parts.push(`Biomask ×${r.biomask}`);
+  return parts.join(', ');
+}
+
+// ════════════════════════════════════════
+// RESERVAS
+// ════════════════════════════════════════
+async function cargarReservas() {
+  irA('p-reservas');
+  const res = await apiConRespuesta('obtenerReservas');
+  const cont = document.getElementById('lista-reservas');
+  const alertaBox = document.getElementById('alerta-vencidas');
+
+  if (!res.ok) { cont.innerHTML = '<div class="empty-state">Error al cargar reservas</div>'; return; }
+
+  const vencidas = res.reservas.filter(r => r.estadoVenc === 'vencida');
+  if (vencidas.length > 0) {
+    alertaBox.style.display = 'block';
+    alertaBox.textContent = `⚠ ${vencidas.length} reserva(s) vencida(s) sin gestionar`;
+  } else {
+    alertaBox.style.display = 'none';
+  }
+
+  if (res.reservas.length === 0) {
+    cont.innerHTML = '<div class="empty-state">No hay reservas activas</div>';
+    return;
+  }
+
+  const etiquetas = { vencida:'venc-vencida', hoy:'venc-hoy', manana:'venc-manana', futuro:'venc-futuro', 'sin-fecha':'venc-futuro' };
+  const textos    = { vencida:'Vencida', hoy:'Vence hoy', manana:'Mañana', futuro:'Próximos días', 'sin-fecha':'Sin fecha' };
+
+  cont.innerHTML = res.reservas.map(r => `
+    <div class="reserva-item ${r.estadoVenc}" onclick="abrirDetalleReserva(${r.id})">
+      <div>
+        <div style="font-weight:500">Res. #${String(r.id).padStart(3,'0')} — ${r.nombre}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${resumenProductos(r)} · u$${r.montoUSD}</div>
+      </div>
+      <span class="venc-badge ${etiquetas[r.estadoVenc]}">${textos[r.estadoVenc]}</span>
+    </div>`).join('');
+}
+
+async function abrirDetalleReserva(id) {
+  const res = await apiConRespuesta('obtenerReservas');
+  if (!res.ok) return;
+  const r = res.reservas.find(rv => String(rv.id) === String(id));
+  if (!r) return;
+
+  estado.reservaActual = r;
+  document.getElementById('dr-titulo').textContent = `Reserva #${String(r.id).padStart(3,'0')}`;
+  document.getElementById('dr-datos-cliente').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px">
+      <div><span style="color:var(--muted)">Nombre:</span> ${r.nombre}</div>
+      <div><span style="color:var(--muted)">CUIT:</span> ${r.cuit}</div>
+      <div><span style="color:var(--muted)">Email:</span> ${r.email}</div>
+      <div><span style="color:var(--muted)">WA:</span> ${r.telefono}</div>
+    </div>`;
+  document.getElementById('dr-productos').innerHTML = `
+    <div style="font-size:13px">${resumenProductos(r)}</div>
+    <div style="font-size:13px;color:var(--muted);margin-top:4px">Monto original: u$${r.montoUSD}</div>`;
+  document.getElementById('dr-monto-final').value = r.montoUSD;
+  irA('p-detalle-reserva');
+}
+
+async function cerrarReserva() {
+  const r = estado.reservaActual;
+  const montoFinal = parseFloat(document.getElementById('dr-monto-final').value) || r.montoUSD;
+  const res = await apiConRespuesta('cerrarReserva', {
+    idReserva: r.id,
+    nombre: r.nombre, cuit: r.cuit, email: r.email, telefono: r.telefono,
+    montoUSD: montoFinal, operador: estado.rol
+  });
+  if (res.ok) {
+    estado.ultimoId = res.id;
+    estado.ultimoTipo = 'Cierre reserva';
+    estado.ultimaData = { nombre: r.nombre, telefono: r.telefono };
+    irA('p-confirmacion');
+    document.getElementById('conf-numero').textContent = '#' + String(res.id).padStart(3,'0');
+    document.getElementById('conf-tipo').textContent = 'Cierre de reserva';
+    actualizarEstadoImpresion(res.urlPDF ? 'OK' : 'Error', res.urlPDF);
+  }
+}
+
+function irAModificarReserva() {
+  // Carga el formulario de venta prellenado para modificar
+  const r = estado.reservaActual;
+  resetFormulario();
+  document.getElementById('f-nombre').value = r.nombre;
+  document.getElementById('f-email').value  = r.email;
+  document.getElementById('f-cuit').value   = r.cuit;
+  document.getElementById('f-telefono').value = r.telefono;
+  estado.unidades = { Dermal: r.dermal||0, Capillary: r.capillary||0, Pink: r.pink||0, Biomask: r.biomask||0 };
+  renderizarProductos();
+  recalcularCajas();
+  calcularTotales();
+  irA('p-formulario');
+}
+
+// ════════════════════════════════════════
+// MODIFICAR / CANCELAR (P6)
+// ════════════════════════════════════════
+async function buscarParaModificar() {
+  const q = document.getElementById('mod-buscar').value.trim();
+  if (!q) return;
+  const res = await apiConRespuesta('obtenerPedidos', {});
+  const todos = res.pedidos || [];
+  const enc = todos.find(p =>
+    String(p.id) === q ||
+    (p.cuit && p.cuit.includes(q)) ||
+    (p.nombre && p.nombre.toLowerCase().includes(q.toLowerCase()))
+  );
+  if (!enc) {
+    document.getElementById('mod-resultado').style.display = 'none';
+    alert('No se encontró ninguna transacción');
+    return;
+  }
+  estado.pedidoEncontrado = enc;
+  document.getElementById('mod-datos').innerHTML = `
+    <div style="font-size:13px">
+      <strong>#${String(enc.id).padStart(3,'0')}</strong> — ${enc.nombre}<br>
+      <span style="color:var(--muted)">${enc.tipo} · ${enc.estado} · u$${enc.montoUSD}</span>
+    </div>`;
+  document.getElementById('mod-resultado').style.display = 'block';
+  document.getElementById('mod-error').style.display = 'none';
+}
+
+async function ejecutarCancelacion() {
+  const codigo = document.getElementById('mod-codigo').value;
+  const errBox = document.getElementById('mod-error');
+  const p = estado.pedidoEncontrado;
+  if (!p) return;
+  const res = await apiConRespuesta('cancelarVenta', { id: p.id, codigoSupervisor: codigo });
+  if (res.ok) {
+    alert(`Transacción #${String(p.id).padStart(3,'0')} anulada. Se generó comprobante de anulación.`);
+    document.getElementById('mod-resultado').style.display = 'none';
+    document.getElementById('mod-codigo').value = '';
+  } else {
+    errBox.textContent = res.error || 'Error';
+    errBox.style.display = 'block';
+  }
+}
+
+// ════════════════════════════════════════
+// DESPACHO — KANBAN
+// ════════════════════════════════════════
+async function cargarDespacho() {
+  const res = await apiConRespuesta('obtenerPedidos', {});
+  if (!res.ok) return;
+
+  const columnas = ['Pendiente','En preparación','Listo','Entregado'];
+  columnas.forEach(col => {
+    const c = document.getElementById('col-' + col);
+    if (c) c.innerHTML = '';
+  });
+
+  res.pedidos.forEach(p => {
+    const col = document.getElementById('col-' + p.estado);
+    if (!col) return;
+
+    const esReserva = p.tipo === 'Reserva';
+    const badgeClass = p.tipo === 'Venta' ? 'badge-venta' : p.tipo === 'Reserva' ? 'badge-reserva' : 'badge-cierre';
+    const badgeText  = p.tipo === 'Cierre reserva' ? 'Cierre' : p.tipo;
+
+    const card = document.createElement('div');
+    card.className = 'pedido-card' + (esReserva ? ' reserva-card' : '');
+    card.onclick = () => abrirDetallePedido(p.id);
+    card.innerHTML = `
+      <div class="pedido-num">#${String(p.id).padStart(3,'0')}</div>
+      <div class="pedido-nom">${p.nombre}</div>
+      <div class="pedido-prods">${resumenProductos({ dermal:p.dermal, capillary:p.capillary, pink:p.pink, biomask:p.biomask })}</div>
+      <span class="pedido-tipo-badge ${badgeClass}">${badgeText}</span>`;
+    col.appendChild(card);
+  });
+}
+
+async function abrirDetallePedido(id) {
+  const res = await apiConRespuesta('obtenerPedidos', {});
+  if (!res.ok) return;
+  const p = res.pedidos.find(x => String(x.id) === String(id));
+  if (!p) return;
+
+  estado.pedidoActual = p;
+  document.getElementById('dp-titulo').textContent = `Pedido #${String(p.id).padStart(3,'0')}`;
+
+  const badgeClass = p.tipo === 'Venta' ? 'badge-venta' : p.tipo === 'Reserva' ? 'badge-reserva' : 'badge-cierre';
+  document.getElementById('dp-datos').innerHTML = `
+    <div style="font-size:13px;display:flex;flex-direction:column;gap:6px">
+      <div><span class="pedido-tipo-badge ${badgeClass}">${p.tipo}</span></div>
+      <div><strong>${p.nombre}</strong></div>
+      <div style="color:var(--muted)">${resumenProductos({ dermal:p.dermal, capillary:p.capillary, pink:p.pink, biomask:p.biomask })}</div>
+      <div>u$${p.montoUSD}</div>
+    </div>`;
+
+  const impBox  = document.getElementById('dp-imp-status');
+  const impTxt  = document.getElementById('dp-imp-texto');
+  impBox.className = 'imp-status ' + (p.estadoImp === 'OK' ? 'imp-ok' : 'imp-err');
+  impTxt.textContent = p.estadoImp === 'OK' ? 'Comprobante generado' : 'Comprobante pendiente';
+
+  renderizarAccionesDespacho(p);
+  irA('p-detalle-pedido');
+}
+
+function renderizarAccionesDespacho(p) {
+  const cont = document.getElementById('dp-acciones');
+  const estados = ['Pendiente','En preparación','Listo','Entregado'];
+  const sig = estados[estados.indexOf(p.estado) + 1];
+
+  cont.innerHTML = '';
+
+  if (p.estado === 'Listo') {
+    const divQ = document.createElement('div');
+    divQ.style.cssText = 'background:#f0f5fa;border-radius:8px;padding:12px;font-size:13px;margin-bottom:4px';
+    divQ.textContent = '¿El cliente desea hacer cambios antes de retirar?';
+    cont.appendChild(divQ);
+
+    const btnMod = document.createElement('button');
+    btnMod.className = 'btn btn-warning btn-full';
+    btnMod.textContent = 'Agregar / modificar productos';
+    btnMod.onclick = () => abrirModifRetirar(p);
+    cont.appendChild(btnMod);
+  }
+
+  if (sig) {
+    const btnAv = document.createElement('button');
+    btnAv.className = 'btn btn-primary btn-full btn-lg';
+    btnAv.textContent = sig === 'Entregado' ? 'Marcar como entregado' : `Marcar como "${sig}"`;
+    btnAv.onclick = () => avanzarEstado(p.id, sig);
+    cont.appendChild(btnAv);
+  }
+
+  const btnWA = document.createElement('button');
+  btnWA.className = 'btn btn-outline btn-full';
+  btnWA.textContent = 'Enviar WhatsApp';
+  btnWA.onclick = () => {
+    if (p.estado === 'Entregado' || sig === 'Entregado') enviarWA('entrega');
+    else enviarWA('confirmacion');
+  };
+  cont.appendChild(btnWA);
+}
+
+async function avanzarEstado(id, nuevoEstado) {
+  const res = await apiConRespuesta('avanzarEstado', { id });
+  if (res.ok) {
+    if (nuevoEstado === 'Entregado') {
+      // WA automático opcional
+    }
+    await cargarDespacho();
+    irA('p-despacho');
+  }
+}
+
+function reimprimirDesdePedido() {
+  const p = estado.pedidoActual;
+  if (!p) return;
+  if (p.urlPDF) { window.open(p.urlPDF, '_blank'); return; }
+  apiConRespuesta('reimprimir', { id: p.id }).then(res => {
+    if (res.ok && res.urlPDF) window.open(res.urlPDF, '_blank');
+    else alert('No se pudo generar el comprobante');
+  });
+}
+
+// ════════════════════════════════════════
+// MODIFICAR AL RETIRAR
+// ════════════════════════════════════════
+function abrirModifRetirar(p) {
+  estado.pedidoActual = p;
+  estado.unidadesMR = { Dermal: p.dermal||0, Capillary: p.capillary||0, Pink: p.pink||0, Biomask: p.biomask||0 };
+  document.getElementById('mr-num').textContent = `#${String(p.id).padStart(3,'0')}`;
+  document.getElementById('mr-monto').value = p.montoUSD;
+  renderizarProductos('mr-productos-grid', estado.unidadesMR);
+  calcularTotalMR();
+  irA('p-mod-retirar');
+}
+
+function calcularTotalMR() {
+  const u = estado.unidadesMR || {};
+  const total = Object.values(u).reduce((a,b)=>a+b,0);
+  // Estimación simple: precio por unidad (promedio entre cerrada y combinada / 5)
+  document.getElementById('mr-total').textContent = `u$${document.getElementById('mr-monto').value||0}`;
+}
+
+async function confirmarModifRetirar() {
+  const p = estado.pedidoActual;
+  const monto = parseFloat(document.getElementById('mr-monto').value)||0;
+  const errBox = document.getElementById('mr-error');
+  errBox.style.display = 'none';
+
+  const res = await apiConRespuesta('modificarAlRetirar', {
+    idPedido: p.id,
+    unidades: estado.unidadesMR,
+    montoUSD: monto,
+    operador: estado.rol
+  });
+
+  if (res.ok) {
+    if (res.urlPDF) window.open(res.urlPDF, '_blank');
+    await cargarDespacho();
+    irA('p-despacho');
+  } else {
+    errBox.textContent = res.error || 'Error al modificar';
+    errBox.style.display = 'block';
+  }
+}
+
+// ════════════════════════════════════════
+// CIERRE DEL DÍA
+// ════════════════════════════════════════
+async function cargarCierreDia() {
+  irA('p-cierre');
+  const res = await apiConRespuesta('cierreDelDia');
+  const cont = document.getElementById('cierre-contenido');
+
+  if (!res.ok) { cont.innerHTML = '<div class="empty-state">Error al generar cierre</div>'; return; }
+  const r = res.resumen;
+
+  const totalVentas = r.ventasDirectas.usd + r.reservasCerradas.usd;
+  const fmtUSD = v => `u$${Math.round(v).toLocaleString('es-AR')}`;
+  const fmtARS = v => `AR$${Math.round(v).toLocaleString('es-AR')}`;
+
+  cont.innerHTML = `
+    <div class="card">
+      <div class="card-title">Resumen — ${r.fecha}</div>
+      <div class="cierre-grid">
+        <div class="cierre-card">
+          <div class="num">${r.ventasDirectas.qty}</div>
+          <div class="lbl">Ventas directas</div>
+          <div style="font-size:12px;color:var(--verde);margin-top:4px">${fmtUSD(r.ventasDirectas.usd)}</div>
+        </div>
+        <div class="cierre-card">
+          <div class="num">${r.reservasCerradas.qty}</div>
+          <div class="lbl">Reservas cobradas</div>
+          <div style="font-size:12px;color:var(--verde);margin-top:4px">${fmtUSD(r.reservasCerradas.usd)}</div>
+        </div>
+        <div class="cierre-card">
+          <div class="num">${r.reservasActivas.qty}</div>
+          <div class="lbl">Reservas activas</div>
+          <div style="font-size:12px;color:var(--amber);margin-top:4px">Pendientes de cobro</div>
+        </div>
+      </div>
+      <div class="cierre-grid">
+        <div class="cierre-card">
+          <div class="num">${r.anulaciones.qty}</div>
+          <div class="lbl">Anulaciones</div>
+        </div>
+        <div class="cierre-card">
+          <div class="num">${fmtUSD(r.totalRecaudadoUSD)}</div>
+          <div class="lbl">Total recaudado USD</div>
+        </div>
+        <div class="cierre-card">
+          <div class="num" style="font-size:20px">${fmtARS(r.totalRecaudadoARS)}</div>
+          <div class="lbl">Total recaudado ARS</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Desglose por método de pago</div>
+      <table class="cierre-tabla">
+        <thead><tr><th>Método</th><th>USD</th><th>ARS</th></tr></thead>
+        <tbody>
+          <tr><td>Efectivo</td><td>${fmtUSD(r.porMetodo.Efectivo.usd)}</td><td>${fmtARS(r.porMetodo.Efectivo.ars)}</td></tr>
+          <tr><td>Transferencia</td><td>${fmtUSD(r.porMetodo.Transferencia.usd)}</td><td>${fmtARS(r.porMetodo.Transferencia.ars)}</td></tr>
+          <tr><td>Tarjeta</td><td>—</td><td>${fmtARS(r.porMetodo.Tarjeta.ars)}</td></tr>
+          <tr><td>QR</td><td>—</td><td>${fmtARS(r.porMetodo.QR.ars)}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">Stock al cierre</div>
+      <table class="cierre-tabla">
+        <thead><tr><th>Producto</th><th>Disponible</th><th>Comprometido</th></tr></thead>
+        <tbody>
+          ${['Dermal','Capillary','Pink','Biomask'].map(p => {
+            const s = r.stock[p] || {};
+            return `<tr><td>${p}</td><td>${s.disponible||0}</td><td>${s.comprometido||0}</td></tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// ════════════════════════════════════════
+// REIMPRIMIR
+// ════════════════════════════════════════
+async function reimprimir() {
+  if (!estado.ultimoId) return;
+  const res = await apiConRespuesta('reimprimir', { id: estado.ultimoId });
+  if (res.ok && res.urlPDF) {
+    window.open(res.urlPDF, '_blank');
+    actualizarEstadoImpresion('OK', res.urlPDF);
+  } else {
+    alert('No se pudo generar el comprobante. Revisá la conexión.');
+  }
+}
+
+// ════════════════════════════════════════
+// UTILIDADES
+// ════════════════════════════════════════
+function resetFormulario() {
+  estado.unidades = { Dermal:0, Capillary:0, Pink:0, Biomask:0 };
+  estado.cajas    = [];
+  estado.esExtranjero = false;
+  ['f-nombre','f-email','f-cuit','f-telefono','f-descuento','f-tipo-cambio'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value=''; el.disabled=false; }
+  });
+  document.getElementById('f-metodo').value = '';
+  document.getElementById('f-moneda').value = 'USD';
+  document.getElementById('card-vencimiento').style.display = 'none';
+  document.getElementById('row-tipo-cambio').style.display  = 'none';
+  document.getElementById('btn-extr').className = 'btn btn-outline btn-sm btn-extranjero';
+  renderizarProductos();
+  renderizarCajas();
+  calcularTotales();
+  document.getElementById('form-error').style.display = 'none';
+}
+
+function nuevaVenta() {
+  resetFormulario();
+  irA('p-formulario');
+}
+
+function pedirCodigoYCancelar(tipo) {
+  const codigo = prompt('Ingresá el código de supervisor para cancelar:');
+  if (!codigo) return;
+  const id = tipo === 'reserva' ? estado.reservaActual.id : estado.pedidoActual.id;
+  apiConRespuesta('cancelarVenta', { id, codigoSupervisor: codigo }).then(res => {
+    if (res.ok) {
+      alert('Cancelación registrada. Se generó comprobante de anulación.');
+      volverMenu();
+    } else {
+      alert(res.error || 'Código incorrecto o error');
+    }
+  });
+}
+
+// ════════════════════════════════════════
+// INICIALIZACIÓN
+// ════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  irA('p-login');
+});
+</script>
+</body>
+</html>
