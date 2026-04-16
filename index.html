@@ -752,9 +752,12 @@ body { font-family:'DM Sans',sans-serif; font-size:14px; color:var(--texto); bac
     </div>
     <div class="card">
       <div class="card-title">Pago adicional</div>
+      <div id="mr-aviso-monto" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:8px 12px;font-size:13px;color:#856404;margin-bottom:10px;">
+        Revisá y ajustá el monto si cambiaron los productos
+      </div>
       <div class="form-group">
         <label class="form-label">Monto final USD</label>
-        <input type="number" id="mr-monto" class="form-control">
+        <input type="number" id="mr-monto" class="form-control" oninput="document.getElementById('mr-total').textContent='u$'+(this.value||0)">
       </div>
     </div>
     <div class="totales-bar">
@@ -806,16 +809,17 @@ const PRODUCTOS = ['Dermal','Capillary','Pink','Biomask'];
 // ESTADO GLOBAL
 // ════════════════════════════════════════
 let estado = {
-  rol:           null,
-  stock:         {},
-  unidades:      { Dermal:0, Capillary:0, Pink:0, Biomask:0 },
-  cajas:         [],
-  esExtranjero:  false,
-  ultimoId:      null,
-  ultimoTipo:    null,
-  ultimaData:    null,
-  reservaActual: null,
-  pedidoActual:  null,
+  rol:              null,
+  stock:            {},
+  unidades:         { Dermal:0, Capillary:0, Pink:0, Biomask:0 },
+  unidadesMR:       { Dermal:0, Capillary:0, Pink:0, Biomask:0 },
+  cajas:            [],
+  esExtranjero:     false,
+  ultimoId:         null,
+  ultimoTipo:       null,
+  ultimaData:       null,
+  reservaActual:    null,
+  pedidoActual:     null,
   pedidoEncontrado: null
 };
 
@@ -831,21 +835,7 @@ function irA(id) {
 // ════════════════════════════════════════
 // API
 // ════════════════════════════════════════
-async function api(accion, datos={}) {
-  const payload = JSON.stringify({ accion, ...datos });
-  try {
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: payload
-    });
-    // no-cors retorna opaque — guardamos en Sheets via script
-    return { ok: true };
-  } catch(e) {
-    return { ok: false, error: e.toString() };
-  }
-}
+// api() eliminada — todo usa apiConRespuesta() via GET
 
 async function apiConRespuesta(accion, datos={}) {
   // Apps Script no soporta CORS desde dominios externos.
@@ -1023,9 +1013,11 @@ function renderizarCajas() {
 function formatearCUIT(input) {
   if (estado.esExtranjero) return;
   let v = input.value.replace(/\D/g,'').slice(0,11);
-  if (v.length > 2)  v = v.slice(0,2)  + '-' + v.slice(2);
-  if (v.length > 11) v = v.slice(0,11) + '-' + v.slice(11);
-  input.value = v;
+  let r = '';
+  if (v.length <= 2) r = v;
+  else if (v.length <= 10) r = v.slice(0,2) + '-' + v.slice(2);
+  else r = v.slice(0,2) + '-' + v.slice(2,10) + '-' + v.slice(10);
+  input.value = r;
 }
 
 function toggleExtranjero() {
@@ -1075,11 +1067,19 @@ function calcularTotales() {
 }
 
 function mostrarCampoVencimiento() {
-  document.getElementById('card-vencimiento').style.display = 'block';
-  // Scroll al final
-  document.getElementById('card-vencimiento').scrollIntoView({ behavior:'smooth' });
-  // Confirmación
-  setTimeout(() => enviarFormulario('Reserva'), 100);
+  const card = document.getElementById('card-vencimiento');
+  if (card.style.display === 'none' || card.style.display === '') {
+    card.style.display = 'block';
+    card.scrollIntoView({ behavior:'smooth' });
+    // Cambiar el botón a "Confirmar reserva" ahora que el campo es visible
+    const btnRes = document.querySelector('[onclick="mostrarCampoVencimiento()"]');
+    if (btnRes) {
+      btnRes.textContent = 'Confirmar reserva';
+      btnRes.setAttribute('onclick', 'enviarFormulario(\'Reserva\')');
+    }
+  } else {
+    enviarFormulario('Reserva');
+  }
 }
 
 // ════════════════════════════════════════
@@ -1447,11 +1447,10 @@ function renderizarAccionesDespacho(p) {
 async function avanzarEstado(id, nuevoEstado) {
   const res = await apiConRespuesta('avanzarEstado', { id });
   if (res.ok) {
-    if (nuevoEstado === 'Entregado') {
-      // WA automático opcional
-    }
     await cargarDespacho();
     irA('p-despacho');
+  } else {
+    alert('No se pudo actualizar el estado: ' + (res.error || 'Error desconocido'));
   }
 }
 
@@ -1479,10 +1478,11 @@ function abrirModifRetirar(p) {
 }
 
 function calcularTotalMR() {
-  const u = estado.unidadesMR || {};
-  const total = Object.values(u).reduce((a,b)=>a+b,0);
-  // Estimación simple: precio por unidad (promedio entre cerrada y combinada / 5)
-  document.getElementById('mr-total').textContent = `u$${document.getElementById('mr-monto').value||0}`;
+  const montoActual = document.getElementById('mr-monto').value;
+  document.getElementById('mr-total').textContent = `u$${montoActual||0}`;
+  // Indicar que el monto puede necesitar ajuste
+  const aviso = document.getElementById('mr-aviso-monto');
+  if (aviso) aviso.style.display = 'block';
 }
 
 async function confirmarModifRetirar() {
